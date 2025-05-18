@@ -11,14 +11,14 @@ This repo contains a faster version of LibreWolf, inspired by Mercury browser. I
 
 ## ⚡ What Makes It Faster
 
-| Optimization | What It Does |
-|--------------|-------------|
-| **Smarter Compiler** | Watches how you browse, then optimizes accordingly (not creepy at all) |
-| **Better Optimization** | Cranked to -O3 because -O2 is so last decade |
-| **Modern CPU Features** | Unleashes AVX2 instructions your CPU has been dying to show off |
-| **Faster Linker** | Swapped LLD for Mold (sounds like fungi, works like magic) |
-| **Parallel Building** | Convinced all your CPU cores to work together for once |
-| **Rust Improvements** | Told the Rust compiler to stop being so conservative |
+| Feature | Benefit |
+|---------|---------|
+| **PGO** | Uses your browsing patterns to optimize code paths |
+| **-O3** | Higher optimization level than default -O2 |
+| **AVX2** | Uses modern CPU instructions for faster processing |
+| **Mold** | Faster linker than default LLD |
+| **Parallel Build** | Uses multiple CPU cores for faster compiling |
+| **Rust Optimizations** | Better settings for Rust components |
 
 ## 📦 Installation
 
