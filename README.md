@@ -24,10 +24,16 @@ This repo contains a faster version of LibreWolf, inspired by Mercury browser. I
 
 ### Pre-built Binary
 
-```bash
-# Install the pre-built package
-sudo pacman -U librewolf-1:138.0.3_1-1-x86_64.pkg.tar.zst
-```
+1. Download the package from the Releases section
+2. Install with:
+   ```bash
+   sudo pacman -U librewolf-1:138.0.3_1-1-x86_64.pkg.tar.zst
+   ```
+> 💡 **Tip:** Review the PKGBUILD file for detailed optimization info
+
+## ✨ Inspiration
+
+Inspired by [Mercury Browser](https://github.com/Alex313031/Mercury) - a Firefox fork that proved optimized compiler settings can make browsers significantly faster. 
 
 ## ⚠️ Important Notes
 
