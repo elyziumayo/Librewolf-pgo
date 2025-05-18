@@ -4,11 +4,6 @@
 
 A performance-optimized build of LibreWolf for Arch Linux that's been hitting the compiler gym. Think of it as LibreWolf after a few cups of espresso. ☕
 
-
-## 📋 About This Project
-
-This repo contains a faster version of LibreWolf, inspired by Mercury browser. I've tinkered with the build settings until the compiler started sweating. The browser didn't know what hit it.
-
 ## ⚡ What Makes It Faster
 
 | Feature | Benefit |
