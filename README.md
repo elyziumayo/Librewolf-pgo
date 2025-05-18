@@ -22,22 +22,11 @@ This repo contains a faster version of LibreWolf, inspired by Mercury browser. I
 
 ## 📦 Installation
 
-### Option 1: Using Pre-built Binary
+### Pre-built Binary
 
 ```bash
 # Install the pre-built package
 sudo pacman -U librewolf-1:138.0.3_1-1-x86_64.pkg.tar.zst
-```
-
-### Option 2: Building from Source
-
-```bash
-# Clone this repository
-git clone https://github.com/elyziumayo/librewolf-pgo.git
-cd librewolf-pgo
-
-# Build the package
-makepkg -si
 ```
 
 ## ⚠️ Important Notes
