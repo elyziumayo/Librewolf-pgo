@@ -1,4 +1,4 @@
-# 🔥 LibreWolf-PGO 🔥
+# 🔥 LibreWolf-PGO 
 
 📌 Version: 138.0.3_1
 
