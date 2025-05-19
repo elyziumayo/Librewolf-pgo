@@ -7,7 +7,7 @@
 pkgname=librewolf
 _pkgname=LibreWolf
 epoch=1
-pkgver=138.0.3_1
+pkgver=138.0.4_1
 _fixedfirefoxver="${pkgver%_*}" # Version of Firefox this LibreWolf version is based on, but the Firefox patch number is always included
 _librewolfver="${pkgver#*_}"
 _firefoxver="${_fixedfirefoxver%.0}" # Removes ".0" from the end. For "136.0.0" this will result in "136.0" but for "136.0.1" won't do anything.
@@ -58,12 +58,13 @@ makedepends=(
   inetutils
   jack
   jq
-  lld
+  mold
   llvm
   mesa
   nasm
   nodejs
   pciutils
+  lld
   python
   python-setuptools
   rust
@@ -113,7 +114,7 @@ source=(
   "default192x192.png"
 )
 
-sha256sums=('0a849bb4cb4448004451f1af87c12a951d782048e8668b9b6754246089c45dcb'
+sha256sums=('b63081971871154cf115ef3f237e865c2c1358c7086c3ff71c21918d4f343e9f'
             '7d01d317b7db7416783febc18ee1237ade2ec86c1567e2c2dd628a94cbf2f25d'
             '959c94c68cab8d5a8cff185ddf4dca92e84c18dccc6dc7c8fe11c78549cdc2f1')
 
@@ -136,7 +137,20 @@ ac_add_options --disable-bootstrap
 
 export CC='clang'
 export CXX='clang++'
-export LINKER_FLAGS="-j6"
+
+# Compiler, Linker, and Rust flags
+export CFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
+export CPPFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
+export CXXFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
+export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=x86-64-v3 -Wl,--threads=6 -Wl,--gc-sections"
+#export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"
+export RUSTFLAGS="-C target-cpu=x86-64-v3 -C target-feature=+avx2 -C codegen-units=1"
+export POLLY="-mllvm -polly -mllvm -polly-2nd-level-tiling -mllvm -polly-loopfusion-greedy -mllvm -polly-pattern-matching-based-opts -mllvm -polly-position=before-vectorizer -mllvm -polly-vectorizer=stripmine"
+export VERBOSE=1
+
+# Enable Mozilla-specific LTO flag (safe to enable globally)
+export MOZ_LTO=1
+ac_add_options MOZ_LTO=1
 
 # Branding
 ac_add_options --with-app-name=${pkgname}
@@ -157,45 +171,49 @@ ac_add_options --enable-pulseaudio
 
 # wasi
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+# Use lld specifically for WASM while keeping mold for the main linking
+export WASM_LD="/usr/bin/wasm-ld"
 
-# options for ci / weaker build systems
+# options for controlled parallelism to avoid memory exhaustion
 mk_add_options MOZ_MAKE_FLAGS="-j6"
 # ac_add_options --enable-linker=gold
 
-# Set Optimization Level to 3
+# optimizations
+# Set -Copt-level=3
 export OPT_LEVEL="3"
 ac_add_options OPT_LEVEL="3"
 export RUSTC_OPT_LEVEL="3"
 ac_add_options RUSTC_OPT_LEVEL="3"
 
-# Enable Link Time Optimization (LTO)
-export MOZ_LTO=1
-ac_add_options MOZ_LTO=1
+# Disable debug
+ac_add_options --disable-debug
+ac_add_options --disable-debug-symbols
+ac_add_options --disable-debug-js-modules
 
-# Do not enable PGO globally - will be set appropriately in build phases
-# export MOZ_PGO=1
-# ac_add_options MOZ_PGO=1
+# Strip debug symbols for smaller binaries and faster loading
+ac_add_options --enable-strip
+ac_add_options --enable-install-strip
+export STRIP_FLAGS="--strip-debug --strip-unneeded"
 
-# Custom Compiler, Linker, and Rust Flags
-export CFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export CPPFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export CXXFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=x86-64-v3 -fuse-ld=mold"
-export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"   # Uncomment if you want to use Polly during linking
-export RUSTFLAGS="-C target-cpu=x86-64-v3 -C target-feature=+avx2 -C codegen-units=1"
-export POLLY="-mllvm -polly -mllvm -polly-2nd-level-tiling -mllvm -polly-loopfusion-greedy -mllvm -polly-pattern-matching-based-opts -mllvm -polly-position=before-vectorizer -mllvm -polly-vectorizer=stripmine"
+# Enable automatic clobber to prevent build errors
+mk_add_options AUTOCLOBBER=1
+export AUTOCLOBBER=1.
 
-# Enable verbose output for build process
-export VERBOSE=1
+# Enable additional optimizations
+ac_add_options --enable-wasm-avx          # Enable AVX instructions for WebAssembly
+ac_add_options --enable-optimize="-O3 -march=x86-64-v3"  # Target modern x86-64 CPUs with better instruction set
+ac_add_options --enable-rust-simd         # Enable SIMD optimizations in Rust code
 
+# Mozilla-specific PGO/LTO flags removed to avoid conflicts with existing implementation
+# The current PGO and LTO implementation is already optimized
 END
 
 if [[ "${CARCH}" == "aarch64" ]]; then
   cat >>../mozconfig <<END
 # TODO: re-evaluate (is used by ALARM, but why?)
-ac_add_options --enable-optimize="-g0 -O3"
+ac_add_options --enable-optimize="-g0 -O2"
 
-ac_add_options --enable-lto
+ac_add_options --enable-lto=full
 END
 
   export MOZ_DEBUG_FLAGS=" "
@@ -209,7 +227,7 @@ else
 # Arch upstream has it in their PKGBUILD, ALARM does not for aarch64:
 ac_add_options --disable-elf-hack
 
-ac_add_options --enable-lto=cross
+ac_add_options --enable-lto=full
 END
 fi
 
@@ -240,21 +258,24 @@ build() {
   # LTO/PGO needs more open files
   ulimit -n 4096
 
-  # Do PGO build if enabled
+  # Do 3-tier PGO
+
+
   if [[ "${_build_profiled}" == "true" ]]; then
-    # STAGE 1: Generate profile data
-    export MOZ_PGO=1
-    
     if [[ "${CARCH}" == "aarch64" ]]; then
+
       cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate
 export MOZ_ENABLE_FULL_SYMBOLS=1
 END
+
     else
+
       cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate=cross
 export MOZ_ENABLE_FULL_SYMBOLS=1
 END
+
     fi
 
     # temporarily disable ublock-origin, interferes with profiling
@@ -262,16 +283,18 @@ END
     jq 'del(.policies.Extensions.Install)' "$srcdir/policies.json" > "lw/policies.json"
 
     echo "Building instrumented browser..."
+
     ./mach build --priority normal
 
     echo "Profiling instrumented browser..."
+
     ./mach package
 
     local _headless_env=(
       LIBGL_ALWAYS_SOFTWARE=true \
       LLVM_PROFDATA=llvm-profdata \
-      JARLOG_FILE="$PWD/jarlog" \
-      dbus-run-session
+        JARLOG_FILE="$PWD/jarlog" \
+        dbus-run-session
     )
 
     if [[ "${_build_profiled_xvfb}" == "true" ]]; then
@@ -293,9 +316,6 @@ END
 
     echo "Building optimized browser..."
 
-    # STAGE 2: Use profile data
-    export MOZ_PGO=1
-    
     if [[ -s merged.profdata ]]; then
       stat -c "Profile data found (%s bytes)" merged.profdata
 
@@ -313,9 +333,7 @@ END
 ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
 END
     else
-      echo "Profile data not found, falling back to non-PGO build"
-      # If no profile data found, just use the original mozconfig
-      cat >.mozconfig ../mozconfig
+      echo "Profile data not found."
     fi
 
     if [[ -s jarlog ]]; then
@@ -331,7 +349,6 @@ END
     cp "$srcdir/policies.json" "lw/policies.json"
 
   else
-    # Non-PGO build
     cat >.mozconfig ../mozconfig
   fi
 
@@ -398,3 +415,4 @@ END
     ln -srfv "$pkgdir/usr/lib/libnssckbi.so" "$nssckbi"
   fi
 }
+
