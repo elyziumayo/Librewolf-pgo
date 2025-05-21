@@ -24,7 +24,7 @@ sudo pacman -S  dbus alsa-lib at-spi2-core bash cairo ffmpeg fontconfig freetype
 ```
 ### Install the pre-built package
 ```bash
-sudo pacman -U librewolf-1:138.0.4_1-1-x86_64.pkg.tar.zst
+sudo pacman -U librewolf-1.138.0.4_1-1-x86_64.pkg.tar.zst
 ```
 > 💡 **Tip:** Review the PKGBUILD file for detailed optimization info
 
