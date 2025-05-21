@@ -204,8 +204,6 @@ ac_add_options --enable-wasm-avx          # Enable AVX instructions for WebAssem
 ac_add_options --enable-optimize="-O3 -march=x86-64-v3"  # Target modern x86-64 CPUs with better instruction set
 ac_add_options --enable-rust-simd         # Enable SIMD optimizations in Rust code
 
-# Mozilla-specific PGO/LTO flags removed to avoid conflicts with existing implementation
-# The current PGO and LTO implementation is already optimized
 END
 
 if [[ "${CARCH}" == "aarch64" ]]; then
