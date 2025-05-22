@@ -133,6 +133,7 @@ ac_add_options --enable-linker=mold
 ac_add_options --prefix=/usr
 
 ac_add_options --disable-bootstrap
+ac_add_options --enable-jemalloc
 
 export CC='clang'
 export CXX='clang++'
