@@ -142,9 +142,9 @@ export CXX='clang++'
 export CFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
 export CPPFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
 export CXXFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=x86-64-v3 -Wl,--threads=6 -Wl,--gc-sections"
-#export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"
-export RUSTFLAGS="-C target-cpu=x86-64-v3 -C target-feature=+avx2 -C codegen-units=1"
+export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=x86-64-v3 -Wl,--threads=8 -Wl,--gc-sections"
+export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"
+export RUSTFLAGS="-C target-cpu=x86-64-v3 -C target-feature=+avx2,+fma,+bmi2,+f16c -C codegen-units=1 -C opt-level=3"
 export POLLY="-mllvm -polly -mllvm -polly-2nd-level-tiling -mllvm -polly-loopfusion-greedy -mllvm -polly-pattern-matching-based-opts -mllvm -polly-position=before-vectorizer -mllvm -polly-vectorizer=stripmine"
 export VERBOSE=1
 
