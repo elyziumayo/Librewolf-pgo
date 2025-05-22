@@ -103,7 +103,6 @@ backup=('usr/lib/librewolf/librewolf.cfg'
 options=(
   !debug
   !emptydirs
-  !lto
   !makeflags
 )
 
