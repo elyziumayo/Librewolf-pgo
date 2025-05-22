@@ -203,7 +203,8 @@ export AUTOCLOBBER=1.
 ac_add_options --enable-wasm-avx          # Enable AVX instructions for WebAssembly
 ac_add_options --enable-optimize="-O3 -march=x86-64-v3"  # Target modern x86-64 CPUs with better instruction set
 ac_add_options --enable-rust-simd         # Enable SIMD optimizations in Rust code
-
+ac_add_options --disable-tests
+ac_add_options --disable-dmd
 END
 
 if [[ "${CARCH}" == "aarch64" ]]; then
