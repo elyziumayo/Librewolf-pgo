@@ -17,11 +17,6 @@ A performance-optimized build of LibreWolf for Arch Linux that's been hitting th
 | **Rust Performance** | Optimized Rust components with reduced codegen units |
 
 ## 🎭 Installation
-
-### Install all dependencies
-```bash
-sudo pacman -S  dbus alsa-lib at-spi2-core bash cairo ffmpeg fontconfig freetype2 gcc-libs gdk-pixbuf2 glib2 dglibc gtk3 hicolor-icon-theme libpulse libx11 libxcb libxcomposite libxdamage libxext libxfixes libxrandr libxss libxt mime-types nspr nss pango ttf-font
-```
 ### Install the pre-built package
 ```bash
 sudo pacman -U librewolf-1.138.0.4_1-1-x86_64.pkg.tar.zst
