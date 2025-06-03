@@ -1,6 +1,6 @@
 # 🔥 LibreWolf-PGO
 
-📌 Version: 138.0.4_1
+📌 Version: 139.0.1
 
 A performance-optimized build of LibreWolf for Arch Linux that's been hitting the compiler gym. Think of it as LibreWolf after a few cups of espresso. ☕
 
