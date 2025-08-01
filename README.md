@@ -1,6 +1,6 @@
 # 🔥 LibreWolf-PGO
 
-📌 Version: 140.0.4_1
+📌 Version: 141.0.0_1
 
 A performance-optimized build of LibreWolf for Arch Linux that's been hitting the compiler gym. Think of it as LibreWolf after a few cups of espresso. ☕
 
@@ -19,7 +19,7 @@ A performance-optimized build of LibreWolf for Arch Linux that's been hitting th
 ## 🎭 Installation
 ### Install the pre-built package
 ```bash
-sudo pacman -U librewolf-1:140.0.4_1-1-x86_64.pkg.tar.zst
+sudo pacman -U librewolf-1:141.0.0_1-1.1-x86_64.pkg.tar.zst
 ```
 > 💡 **Tip:** Review the PKGBUILD file for detailed optimization info
 
