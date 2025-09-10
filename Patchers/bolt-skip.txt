@@ -1,0 +1,3 @@
+^_ZN2js9Interpret.*
+^_ZN2js.*EnterJit.*
+^_ZN2v88internal.*IrregexpInterpreter.*
