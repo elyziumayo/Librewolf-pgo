@@ -1,17 +1,16 @@
-# Maintainer: ohfp/lsf <lsf at pfho dot net>
+# === Maintainer ===
+# ohfp/lsf <lsf at pfho dot net>
 
-# run pgo build or not; with X(vfb) or wayland
 : ${_build_profiled:=true}
-: ${_build_profiled_xvfb:=false}
 
 pkgname=librewolf
 _pkgname=LibreWolf
 epoch=1
 pkgver=142.0.1_1
-_fixedfirefoxver="${pkgver%_*}" # Version of Firefox this LibreWolf version is based on, but the Firefox patch number is always included
+_fixedfirefoxver="${pkgver%_*}"
 _librewolfver="${pkgver#*_}"
-_firefoxver="${_fixedfirefoxver%.0}" # Removes ".0" from the end. For "136.0.0" this will result in "136.0" but for "136.0.1" won't do anything.
-pkgrel=1
+_firefoxver="${_fixedfirefoxver%.0}"
+pkgrel=1.1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 url="https://librewolf.net/"
 arch=(x86_64 aarch64)
@@ -58,13 +57,13 @@ makedepends=(
   inetutils
   jack
   jq
-  mold
+  lld
   llvm
+  perf
   mesa
   nasm
   nodejs
   pciutils
-  lld
   python
   python-setuptools
   rust
@@ -73,9 +72,10 @@ makedepends=(
   'wasi-libc++'
   'wasi-libc++abi'
   'wasi-libc'
+  llvm-bolt
   yasm
   zip
-  ) # pciutils: only to avoid some PGO warning(?)
+)
 optdepends=(
   'hunspell-dictionary: Spell checking'
   'libnotify: Notification integration'
@@ -84,22 +84,10 @@ optdepends=(
   'xdg-desktop-portal: Screensharing with Wayland'
 )
 
-if [[ "${_build_profiled}" == "true" ]]; then
-  if [[ "${_build_profiled_xvfb}" == "true" ]]; then
-    makedepends+=(
-      xorg-server-xvfb
-    )
-  else
-    makedepends+=(
-      weston
-      xorg-xwayland
-      wlheadless-run # aur/xwayland-run-git
-    )
-  fi
-fi
-
-backup=('usr/lib/librewolf/librewolf.cfg'
-        'usr/lib/librewolf/distribution/policies.json')
+backup=(
+  'usr/lib/librewolf/librewolf.cfg'
+  'usr/lib/librewolf/distribution/policies.json'
+)
 options=(
   !debug
   !emptydirs
@@ -108,7 +96,7 @@ options=(
 
 install='librewolf.install'
 source=(
-  https://gitlab.com/api/v4/projects/32320088/packages/generic/librewolf-source/$_firefoxver-$_librewolfver/librewolf-$_firefoxver-$_librewolfver.source.tar.gz # {,.sig} sig files are currently broken, it seems
+  https://gitlab.com/api/v4/projects/32320088/packages/generic/librewolf-source/$_firefoxver-$_librewolfver/librewolf-$_firefoxver-$_librewolfver.source.tar.gz
   $pkgname.desktop
   "default192x192.png"
 )
@@ -117,102 +105,127 @@ sha256sums=('770fd784b91a836edd327e816d735a91852872909933dd8a167cd59f388ffbe1'
             '7d01d317b7db7416783febc18ee1237ade2ec86c1567e2c2dd628a94cbf2f25d'
             '959c94c68cab8d5a8cff185ddf4dca92e84c18dccc6dc7c8fe11c78549cdc2f1')
 
-validpgpkeys=('034F7776EF5E0C613D2F7934D29FBD5F93C0CFC3') # maltej(?)
+validpgpkeys=('034F7776EF5E0C613D2F7934D29FBD5F93C0CFC3')
 
 
 prepare() {
   mkdir -p mozbuild
   cd librewolf-$_firefoxver-$_librewolfver
 
+# === Benchmark Repository Setup ===
+  if [[ "${_build_profiled}" == "true" ]]; then
+    echo "Cloning repositories to Patchers folder..."
+    if [[ ! -d "${startdir}/Patchers" ]]; then
+      mkdir -p "${startdir}/Patchers"
+    fi
+    
+    if [[ ! -d "${startdir}/Patchers/JetStream" ]]; then
+      git clone https://github.com/WebKit/JetStream.git "${startdir}/Patchers/JetStream"
+    fi
+    
+    if [[ ! -d "${startdir}/Patchers/MotionMark" ]]; then
+      git clone https://github.com/elyziumayo/MotionMark.git "${startdir}/Patchers/MotionMark"
+    fi
+  fi
+
   mv mozconfig ../mozconfig
 
   cat >>../mozconfig <<END
 
-ac_add_options --enable-linker=mold
+# === Clang + LLVM Toolchain ===
+export CC=clang
+export CXX=clang++
+export AR=llvm-ar
+export NM=llvm-nm
+export STRIP=llvm-strip
+export OBJCOPY=llvm-objcopy
+export OBJDUMP=llvm-objdump
+export READELF=llvm-readelf
+export RANLIB=llvm-ranlib
+export HOSTCC=clang
+export HOSTCXX=clang++
+export HOSTAR=llvm-ar
+ac_add_options --enable-linker=lld
 
+# === Installation Path ===
 ac_add_options --prefix=/usr
 
+# === Build Configuration ===
 ac_add_options --disable-bootstrap
 ac_add_options --enable-jemalloc
 
-export CC='clang'
-export CXX='clang++'
+# === Compiler Flags ===
+export CFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt"
+export CPPFLAGS="-O3 -ffp-contract=fast -march=native"
+export CXXFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt"
 
-# Compiler, Linker, and Rust flags
-export CFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export CPPFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export CXXFLAGS="-O3 -ffp-contract=fast -march=x86-64-v3"
-export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=x86-64-v3 -Wl,--threads=8 -Wl,--gc-sections"
+# === Linker Flags ===
+export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=native -Wl,--threads=12 -Wl,--gc-sections -Wl,--icf=all"
 export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"
-export RUSTFLAGS="-C target-cpu=x86-64-v3 -C target-feature=+avx2,+fma,+bmi2,+f16c -C codegen-units=1 -C opt-level=3"
-export POLLY="-mllvm -polly -mllvm -polly-2nd-level-tiling -mllvm -polly-loopfusion-greedy -mllvm -polly-pattern-matching-based-opts -mllvm -polly-position=before-vectorizer -mllvm -polly-vectorizer=stripmine"
-export VERBOSE=1
 
-# Enable Mozilla-specific LTO flag (safe to enable globally)
+# === Rust Optimizations ===
+export RUSTFLAGS="-C target-cpu=native -C codegen-units=1 -C opt-level=3"
+
+# === Polly Loop Optimizations ===
+export POLLY="-mllvm -polly -mllvm -polly-2nd-level-tiling -mllvm -polly-loopfusion-greedy -mllvm -polly-pattern-matching-based-opts -mllvm -polly-position=before-vectorizer -mllvm -polly-vectorizer=stripmine"
+
+# === Build System ===
+export VERBOSE=1
+mk_add_options MOZ_MAKE_FLAGS="-j12"
+mk_add_options AUTOCLOBBER=1
+export AUTOCLOBBER=1
+
+# === Mozilla LTO Configuration ===
 export MOZ_LTO=1
 ac_add_options MOZ_LTO=1
 
-# Branding
+# === Branding ===
 ac_add_options --with-app-name=${pkgname}
-# TODO: re-evaluate
 ac_add_options --enable-update-channel=release
-
 export MOZ_APP_REMOTINGNAME=${pkgname}
 
-# System libraries
+# === System Libraries ===
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 
-# Features
-# keep alsa option in here until merged upstream
+# === Audio Support ===
 ac_add_options --enable-alsa
 ac_add_options --enable-jack
 ac_add_options --enable-pulseaudio
 
-# wasi
+# === WebAssembly Support ===
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
-# Use lld specifically for WASM while keeping mold for the main linking
-export WASM_LD="/usr/bin/wasm-ld"
+ac_add_options --enable-wasm-avx
 
-# options for controlled parallelism to avoid memory exhaustion
-mk_add_options MOZ_MAKE_FLAGS="-j6"
-# ac_add_options --enable-linker=gold
-
-# optimizations
-# Set -Copt-level=3
+# === Optimization Levels ===
 export OPT_LEVEL="3"
 ac_add_options OPT_LEVEL="3"
 export RUSTC_OPT_LEVEL="3"
 ac_add_options RUSTC_OPT_LEVEL="3"
+ac_add_options --enable-optimize="-O3 -march=native"
 
-# Disable debug
+# === Debug Configuration ===
 ac_add_options --disable-debug
 ac_add_options --disable-debug-symbols
 ac_add_options --disable-debug-js-modules
 
-# Strip debug symbols for smaller binaries and faster loading
-ac_add_options --enable-strip
-ac_add_options --enable-install-strip
-export STRIP_FLAGS="--strip-debug --strip-unneeded"
+# === Additional Optimizations ===
+ac_add_options --enable-rust-simd
 
-# Enable automatic clobber to prevent build errors
-mk_add_options AUTOCLOBBER=1
-export AUTOCLOBBER=1.
+# === Locale Configuration ===
+ac_add_options --with-l10n-base=.
+ac_add_options --enable-ui-locale=en-US
 
-# Enable additional optimizations
-ac_add_options --enable-wasm-avx          # Enable AVX instructions for WebAssembly
-ac_add_options --enable-optimize="-O3 -march=x86-64-v3"  # Target modern x86-64 CPUs with better instruction set
-ac_add_options --enable-rust-simd         # Enable SIMD optimizations in Rust code
+# === Disable Unnecessary Components ===
 ac_add_options --disable-tests
 ac_add_options --disable-dmd
 END
 
 if [[ "${CARCH}" == "aarch64" ]]; then
   cat >>../mozconfig <<END
-# TODO: re-evaluate (is used by ALARM, but why?)
-ac_add_options --enable-optimize="-g0 -O2"
-
-ac_add_options --enable-lto=full
+# === AArch64 Specific Configuration ===
+ac_add_options --enable-optimize="-g0 -O3 -march=native"
+ac_add_options --enable-lto
 END
 
   export MOZ_DEBUG_FLAGS=" "
@@ -221,95 +234,75 @@ END
   export RUSTFLAGS="-Cdebuginfo=0"
 
 else
-
   cat >>../mozconfig <<END
-# Arch upstream has it in their PKGBUILD, ALARM does not for aarch64:
+# === x86_64 Specific Configuration ===
 ac_add_options --disable-elf-hack
-
-ac_add_options --enable-lto=full
+ac_add_options --enable-lto=cross
 END
 fi
 
-  # reduce chance of builds failing during linking due to running out of memory
+# === Memory Management ===
   export LDFLAGS+=" -Wl,--no-keep-memory"
-
-  # upstream Arch fixes
-  #
 }
 
 
 build() {
   cd librewolf-$_firefoxver-$_librewolfver
 
+# === Build Environment Setup ===
   export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
   export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
   export MOZ_NOSPAM=1
 
-  # malloc_usable_size is used in various parts of the codebase
+# === Compiler Flag Adjustments ===
   CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-
-  # Breaks compilation since https://bugzilla.mozilla.org/show_bug.cgi?id=1896066
   CFLAGS="${CFLAGS/-fexceptions/}"
   CXXFLAGS="${CXXFLAGS/-fexceptions/}"
 
-  # LTO/PGO needs more open files
-  ulimit -n 4096
+# === System Limits ===
+  ulimit -n 8192
 
-  # Do 3-tier PGO
-
-
+# === PGO Build Process ===
   if [[ "${_build_profiled}" == "true" ]]; then
+    # === Profile Generation Configuration ===
     if [[ "${CARCH}" == "aarch64" ]]; then
-
       cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate
 export MOZ_ENABLE_FULL_SYMBOLS=1
+ac_add_options --enable-strip
+ac_add_options --enable-install-strip
+export STRIP_FLAGS="--strip-debug --strip-unneeded"
 END
-
     else
-
       cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate=cross
 export MOZ_ENABLE_FULL_SYMBOLS=1
+ac_add_options --enable-strip
+ac_add_options --enable-install-strip
+export STRIP_FLAGS="--strip-debug --strip-unneeded"
 END
-
     fi
 
-    # temporarily disable ublock-origin, interferes with profiling
+# === Disable Extensions for Profiling ===
     cp "lw/policies.json" "$srcdir/policies.json"
     jq 'del(.policies.Extensions.Install)' "$srcdir/policies.json" > "lw/policies.json"
 
     echo "Building instrumented browser..."
-
     ./mach build --priority normal
 
+# === Enhanced Profiling Setup ===
     echo "Profiling instrumented browser..."
-
     ./mach package
+    cp -f "${startdir}/Patchers/enhance.py" build/pgo/profileserver.py
+    cp -f "${startdir}/Patchers/index.html" build/pgo/index.html
+    cp -rf "${startdir}/Patchers/JetStream" third_party/webkit/PerformanceTests/
+    cp -rf "${startdir}/Patchers/MotionMark/MotionMark" third_party/webkit/PerformanceTests/
+    grep -n "add_host(.*primary" build/pgo/profileserver.py | cat || true
+    LLVM_PROFDATA=llvm-profdata JARLOG_FILE="$PWD/jarlog" ./mach python build/pgo/profileserver.py
 
-    local _headless_env=(
-      LIBGL_ALWAYS_SOFTWARE=true \
-      LLVM_PROFDATA=llvm-profdata \
-        JARLOG_FILE="$PWD/jarlog" \
-        dbus-run-session
-    )
-
-    if [[ "${_build_profiled_xvfb}" == "true" ]]; then
-      local _headless_run=(
-        xvfb-run
-        -s "-screen 0 1920x1080x24 -nolisten local"
-      )
-    else
-      local _headless_run=(
-        wlheadless-run
-        -c weston --width=1920 --height=1080
-      )
-    fi
-
-    env "${_headless_env[@]}" "${_headless_run[@]}" -- ./mach python build/pgo/profileserver.py
-
+# === Profile Use Configuration ===
     echo "Removing instrumented browser..."
     ./mach clobber objdir
 
@@ -317,7 +310,6 @@ END
 
     if [[ -s merged.profdata ]]; then
       stat -c "Profile data found (%s bytes)" merged.profdata
-
       if [[ "${CARCH}" == "x86_64" ]]; then
         cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-use
@@ -327,7 +319,6 @@ END
 ac_add_options --enable-profile-use=cross
 END
       fi
-
       cat >> .mozconfig - << END
 ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
 END
@@ -344,34 +335,97 @@ END
       echo "Jar log not found."
     fi
 
-    # reenable ublock-origin
+# === Re-enable Extensions ===
     cp "$srcdir/policies.json" "lw/policies.json"
 
   else
     cat >.mozconfig ../mozconfig
   fi
 
+  # === Final Build Configuration ===
+  cat >> .mozconfig <<END
+export LDFLAGS="$LDFLAGS -Wl,--emit-relocs"
+END
+  echo "Final build with relocations enabled: LDFLAGS=$LDFLAGS"
   ./mach build --priority normal
+
+# === BOLT Optimization ===
+  if command -v perf >/dev/null 2>&1 && command -v perf2bolt >/dev/null 2>&1 && command -v llvm-bolt >/dev/null 2>&1; then
+      echo "Collecting BOLT profile on optimized browser..."
+      MOZ_DISABLE_PACKAGE_STRIP=1 ./mach package
+      PERF_OUT="$PWD/bolt-perf.data"
+      rm -f "$PERF_OUT"
+      perf record -e cycles:u -j any,u -o "$PERF_OUT" -- ./mach python build/pgo/profileserver.py || true
+
+      BIN="$(find . -path "./obj*" -type f -executable \( -name librewolf -o -name firefox \) | grep "/dist/" | head -n1)"
+      if [[ -n "$BIN" && -s "$PERF_OUT" ]]; then
+        if readelf -S "$BIN" | grep -q -E 'rel(a)?\.text|reloc|RELA|REL'; then
+          echo "Relocations found in binary - BOLT will work with full optimizations"
+        else
+          echo "WARNING: No relocations found - BOLT will use limited optimizations"
+        fi
+        echo "Converting perf data to BOLT format..."
+        perf2bolt -o bolt.fdata -p "$PERF_OUT" "$BIN"
+
+        echo "Running llvm-bolt optimization..."
+        llvm-bolt "$BIN" \
+          -o "$BIN.bolted" \
+          -data=bolt.fdata \
+          -reorder-blocks=ext-tsp \
+          -reorder-functions=cdsort \
+          -split-functions \
+          -split-all-cold \
+          -jump-tables=aggressive \
+          -icf \
+          -peepholes=all
+
+        if [[ -s "$BIN.bolted" ]]; then
+                 chmod +x "$BIN.bolted"
+                 mv -f "$BIN.bolted" "$BIN"
+                 echo "BOLT optimization applied to $BIN"
+                 echo "Stripping final bolted binary..."
+                 strip --strip-all "$BIN" || true
+
+        echo "Removing extra unused sections aggressively with llvm-objcopy..."
+                 llvm-objcopy \
+                      --remove-section=.comment \
+                      --remove-section=.eh_frame \
+                      --remove-section=.note.gnu.build-id \
+                      "$BIN" "$BIN.trimmed"
+
+      if [[ -s "$BIN.trimmed" ]]; then
+                      mv -f "$BIN.trimmed" "$BIN"
+             echo "Binary aggressively trimmed with llvm-objcopy"
+         else
+            echo "llvm-objcopy trimming failed or produced empty file, skipping"
+      fi
+        else
+            echo "BOLT output missing; skipping replacement"
+        fi
+      else
+        echo "Skipping BOLT: binary or perf data missing"
+      fi
+
+  else
+    echo "ERROR: BOLT tools not available - perf, perf2bolt, or llvm-bolt missing"
+    echo "BOLT optimization is required for this build"
+    exit 1
+  fi
 }
 
 package() {
   cd librewolf-$_firefoxver-$_librewolfver
   DESTDIR="$pkgdir" ./mach install
 
+# === Vendor Configuration ===
   local vendorjs="$pkgdir/usr/lib/$pkgname/browser/defaults/preferences/vendor.js"
-
   install -Dvm644 /dev/stdin "$vendorjs" <<END
-// Use system-provided dictionaries
 pref("spellchecker.dictionary_path", "/usr/share/hunspell");
-
-// Don't disable extensions in the application directory
-// done in librewolf.cfg
-// pref("extensions.autoDisableScopes", 11);
 END
 
+# === Distribution Configuration ===
   local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
   install -Dvm644 /dev/stdin "$distini" <<END
-
 [Global]
 id=io.gitlab.${pkgname}-community
 version=1.0
@@ -383,34 +437,29 @@ app.distributor.channel=$pkgname
 app.partner.librewolf=$pkgname
 END
 
+# === Icon Installation ===
   for i in 16 32 48 64 128; do
     install -Dvm644 browser/branding/${pkgname}/default$i.png \
       "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/$pkgname.png"
   done
-  # install -Dvm644 browser/branding/librewolf/content/about-logo.png \
-    # "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
   install -Dvm644 ${srcdir}/default192x192.png \
     "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
-
-  # arch upstream provides a separate svg for this. we don't have that, so let's re-use 16.png
   install -Dvm644 browser/branding/${pkgname}/default16.png \
     "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.png"
-
   install -Dvm644 ../$pkgname.desktop \
     "$pkgdir/usr/share/applications/$pkgname.desktop"
 
-  # Install a wrapper to avoid confusion about binary path
+# === Binary Wrapper ===
   install -Dvm755 /dev/stdin "$pkgdir/usr/bin/$pkgname" <<END
 #!/bin/sh
 exec /usr/lib/$pkgname/librewolf "\$@"
 END
-
-  # Replace duplicate binary with wrapper
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=658850
   ln -srfv "$pkgdir/usr/bin/$pkgname" "$pkgdir/usr/lib/$pkgname/librewolf-bin"
-  # Use system certificates
+
+# === System Certificates ===
   local nssckbi="$pkgdir/usr/lib/$pkgname/libnssckbi.so"
   if [[ -e $nssckbi ]]; then
     ln -srfv "$pkgdir/usr/lib/libnssckbi.so" "$nssckbi"
   fi
 }
+
