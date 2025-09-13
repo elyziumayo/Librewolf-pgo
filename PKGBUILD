@@ -10,7 +10,7 @@ pkgver=142.0.1_1
 _fixedfirefoxver="${pkgver%_*}"
 _librewolfver="${pkgver#*_}"
 _firefoxver="${_fixedfirefoxver%.0}"
-pkgrel=1.2
+pkgrel=1.3
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 url="https://librewolf.net/"
 arch=(x86_64 aarch64)
@@ -155,12 +155,12 @@ ac_add_options --disable-bootstrap
 ac_add_options --enable-jemalloc
 
 # === Compiler Flags ===
-export CFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt"
+export CFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt  -ffunction-sections -fdata-sections"
 export CPPFLAGS="-O3 -ffp-contract=fast -march=native"
-export CXXFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt"
+export CXXFLAGS="-O3 -ffp-contract=fast -march=native -fno-semantic-interposition -fno-plt -ffunction-sections -fdata-sections"
 
 # === Linker Flags ===
-export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=native -Wl,--threads=12 -Wl,--gc-sections -Wl,--icf=all"
+export LDFLAGS="-Wl,-O3 -Wl,-mllvm,-fp-contract=fast -march=native -Wl,--threads=12 -Wl,--gc-sections -Wl,--icf=all -Wl,--as-needed"
 export MOZ_LTO_LDFLAGS="-Wl,-mllvm,-polly"
 
 # === Rust Optimizations ===
@@ -219,6 +219,7 @@ ac_add_options --enable-ui-locale=en-US
 # === Disable Unnecessary Components ===
 ac_add_options --disable-tests
 ac_add_options --disable-dmd
+ac_add_options --disable-webspeech
 END
 
 if [[ "${CARCH}" == "aarch64" ]]; then
@@ -237,7 +238,7 @@ else
   cat >>../mozconfig <<END
 # === x86_64 Specific Configuration ===
 ac_add_options --disable-elf-hack
-ac_add_options --enable-lto=cross
+ac_add_options --enable-lto=full
 END
 fi
 
@@ -376,8 +377,17 @@ END
           -split-functions \
           -split-all-cold \
           -jump-tables=aggressive \
-          -icf \
-          -peepholes=all
+          -icf=all \
+          -group-stubs \
+          -eliminate-unreachable \
+          -peepholes=all \
+          -shorten-instructions \
+          -strip-rep-ret \
+          -x86-strip-redundant-address-size \
+          -jt-footprint-reduction \
+          -simplify-rodata-loads \
+          -inline-small-functions \
+          -frame-opt=hot
 
         if [[ -s "$BIN.bolted" ]]; then
                  chmod +x "$BIN.bolted"
@@ -462,4 +472,3 @@ END
     ln -srfv "$pkgdir/usr/lib/libnssckbi.so" "$nssckbi"
   fi
 }
-
