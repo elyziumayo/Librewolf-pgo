@@ -146,6 +146,7 @@ export HOSTCC=clang
 export HOSTCXX=clang++
 export HOSTAR=llvm-ar
 ac_add_options --enable-linker=lld
+ac_add_options --target=x86_64-unknown-linux-gnu
 
 # === Installation Path ===
 ac_add_options --prefix=/usr
@@ -376,6 +377,7 @@ END
           -reorder-functions=cdsort \
           -split-functions \
           -split-all-cold \
+          -split-strategy=profile2 \
           -jump-tables=aggressive \
           -icf=all \
           -group-stubs \
