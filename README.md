@@ -19,7 +19,7 @@ High-performance LibreWolf with PGO + BOLT optimizations and multi-benchmark pro
 
 > ### 🛰️ Quick Repo Install
 ```bash
-sudo bash -c 'echo -e "\n[Erevos]\nServer = https://elyziumayo.github.io/Erevos/\$arch-v3\nSigLevel = Never" >> /etc/pacman.conf && pacman -Syy && pacman -S librewolf'
+sudo bash -c 'echo -e "\n[Erevos]\nServer = https://erevos.elyzium.net/\$arch-v3\nSigLevel = Never" >> /etc/pacman.conf && pacman -Syy && pacman -S librewolf'
 ```
 
 > ### **⚒️ Manual Repo Install**
@@ -31,7 +31,7 @@ sudo nano /etc/pacman.conf
 > Add these lines at the end of the file:
 ```
 [Erevos]
-Server = https://elyziumayo.github.io/Erevos/$arch-v3
+Server = https://erevos.elyzium.net/$arch-v3
 SigLevel = Never
 ```
 
