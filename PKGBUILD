@@ -120,7 +120,7 @@ prepare() {
     fi
     
     if [[ ! -d "${startdir}/Patchers/JetStream" ]]; then
-      git clone https://github.com/WebKit/JetStream.git "${startdir}/Patchers/JetStream"
+      git clone -b JetStream2.2 --single-branch https://github.com/WebKit/JetStream.git "${startdir}/Patchers/JetStream"
     fi
     
     if [[ ! -d "${startdir}/Patchers/MotionMark" ]]; then
