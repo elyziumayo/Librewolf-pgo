@@ -6,7 +6,7 @@
 pkgname=librewolf
 _pkgname=LibreWolf
 epoch=1
-pkgver=143.0.1_1
+pkgver=143.0.3_1
 _fixedfirefoxver="${pkgver%_*}"
 _librewolfver="${pkgver#*_}"
 _firefoxver="${_fixedfirefoxver%.0}"
@@ -101,7 +101,7 @@ source=(
   "default192x192.png"
 )
 
-sha256sums=('d14081545c2b7a0be9c38ea21f82a1a5ff254eafd391173b12081014c4641879'
+sha256sums=('f90c5c71361f7516d25c4845f2f504706a5444f29bffa12cfc4a46a17979e0c0'
             '7d01d317b7db7416783febc18ee1237ade2ec86c1567e2c2dd628a94cbf2f25d'
             '959c94c68cab8d5a8cff185ddf4dca92e84c18dccc6dc7c8fe11c78549cdc2f1')
 
