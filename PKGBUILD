@@ -10,7 +10,7 @@ pkgver=143.0.4_1
 _fixedfirefoxver="${pkgver%_*}"
 _librewolfver="${pkgver#*_}"
 _firefoxver="${_fixedfirefoxver%.0}"
-pkgrel=1.1
+pkgrel=2.1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 url="https://librewolf.net/"
 arch=(x86_64 aarch64)
@@ -22,7 +22,7 @@ depends=(
   at-spi2-core
   bash
   cairo
-  ffmpeg
+  ffmpeg4.4
   fontconfig
   freetype2
   gcc-libs
